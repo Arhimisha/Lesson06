@@ -9,7 +9,9 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import java.io.IOException;
+import java.io.*;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 public class MySocket {
     static final int DEFAULT_PORT = 8000;
@@ -38,6 +40,28 @@ public class MySocket {
             port = DEFAULT_PORT;
             ip = DEFAULT_IP;
         }
-    }
 
+        try {
+            ServerSocket serverSocket = new ServerSocket(port);
+            while (true) {
+                Socket socket = serverSocket.accept();
+                InputStream inputStream = socket.getInputStream();
+                OutputStream outputStream = socket.getOutputStream();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+                //Writer writer = new OutputStreamWriter(outputStream);
+                System.out.println("clientRequest:");
+                String clientRequest = "";
+                while (clientRequest != null) {
+                    clientRequest = reader.readLine();// +System.lineSeparator();
+
+                    System.out.println( clientRequest);
+                }
+                socket.close();
+                // todo проверить цикличность
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }
