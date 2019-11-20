@@ -12,31 +12,42 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.CharBuffer;
+import java.util.Scanner;
 
 public class MySocket {
     private static final int DEFAULT_PORT = 8000;
 
     public static void main(String[] args) {
-
-        int port = getPortFromConfig();
-
         try {
+            int port = getPortFromConfig();
             ServerSocket serverSocket = new ServerSocket(port);
             while (true) {
-                Socket socket = serverSocket.accept();
+                try (Socket socket = serverSocket.accept()){
+                    InputStream inputStream = socket.getInputStream();
 
-                InputStream inputStream = socket.getInputStream();
-                OutputStream outputStream = socket.getOutputStream();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-                //Writer writer = new OutputStreamWriter(outputStream);
-                System.out.println("clientRequest:");
-                String clientRequest = "";
-                while (!clientRequest.equals("\r\n")) {
-                    clientRequest = reader.readLine();// +System.lineSeparator();
+                    OutputStream outputStream = socket.getOutputStream();
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+                    //Writer writer = new OutputStreamWriter(outputStream);
+                    System.out.println("clientRequest:");
+                    StringBuffer clientRequest = new StringBuffer();
+                    //char[] chars = new char[10000];
+                    //reader.read(chars, 0, 10000);
 
-                    System.out.println( clientRequest);
+//                    for (int i = 0; i < 10000; i++) {
+//                        //if (chars[i] != '\u0000')
+//                        System.out.println(chars[i] + String.format(": \\u%04X", (int)chars[i]) );
+//                    }
+                   //reader.read
+                    //socket.
+                    reader.lines().filter(l -> l != null).forEachOrdered(l -> {
+                        for (int i = 0; i < l.length(); i++) {
+                            System.out.println(l.charAt(i)+ String.format(": \\u%04X", (int)l.charAt(i)));
+                        }
+                    });//.forEachOrdered(line -> clientRequest.append(line + System.lineSeparator()));
+                    //reader.lines().forEach(System.out::println);
+                    System.out.println(clientRequest.toString());
                 }
-                socket.close();
                 // todo проверить цикличность
             }
 
@@ -64,3 +75,5 @@ public class MySocket {
         return DEFAULT_PORT;
     }
 }
+
+// todo убрать println
