@@ -15,27 +15,33 @@ public class MySocket {
             ServerSocket serverSocket = new ServerSocket(port);
             while (true) {
                 try (Socket socket = serverSocket.accept()) {
-                    InputStream inputStream = socket.getInputStream();
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-                    System.out.println("clientRequest:");
-                    StringBuffer clientRequest = new StringBuffer();
-                    reader.lines().filter(Objects::nonNull).takeWhile(l -> !l.isEmpty()).forEachOrdered(line -> clientRequest.append(line).append(System.lineSeparator()));
-                    String request = clientRequest.toString();
-                    System.out.println(request);
+                    while (!socket.isClosed()) {
+                        InputStream inputStream = socket.getInputStream();
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+                        StringBuffer clientRequest = new StringBuffer();
+                        reader.lines().filter(Objects::nonNull).takeWhile(l -> !l.isEmpty()).forEachOrdered(line -> clientRequest.append(line).append(System.lineSeparator()));
+                        String request = clientRequest.toString();
+                        if(0 == request.length()){
+                            socket.close();
+                            break;
+                        }
+                        System.out.println("\nClient Request:");
+                        System.out.println(request);
 
-                    String answer = getAnswer(request);
-                    OutputStream outputStream = socket.getOutputStream();
-                    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream));
-                    System.out.println("answer:");
-                    System.out.println(answer);
-                    writer.write(answer);
-                    writer.flush();
-                    socket.setSoTimeout(3);
+                        String answer = getAnswer(request);
+                        OutputStream outputStream = socket.getOutputStream();
+                        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream));
+                        System.out.println("\nAnswer:");
+                        System.out.println(answer);
+                        writer.write(answer);
+                        writer.flush();
+                    }
                 }
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
+            System.out.println("Socket is close");
         }
     }
 
