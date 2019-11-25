@@ -1,52 +1,40 @@
 package innopolis.stc21.MA;
 
-import org.w3c.dom.DOMException;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
+import static innopolis.stc21.MA.ConfigReader.getPortFromConfig;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.CharBuffer;
-import java.util.Scanner;
 
 public class MySocket {
-    private static final int DEFAULT_PORT = 8000;
 
     public static void main(String[] args) {
         try {
             int port = getPortFromConfig();
             ServerSocket serverSocket = new ServerSocket(port);
             while (true) {
-                try (Socket socket = serverSocket.accept()){
+                try (Socket socket = serverSocket.accept()) {
                     InputStream inputStream = socket.getInputStream();
-
-                    OutputStream outputStream = socket.getOutputStream();
                     BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-                    //Writer writer = new OutputStreamWriter(outputStream);
                     System.out.println("clientRequest:");
                     StringBuffer clientRequest = new StringBuffer();
-                    //char[] chars = new char[10000];
-                    //reader.read(chars, 0, 10000);
+                    reader.lines().filter(l -> l != null).takeWhile(l -> !l.isEmpty()).forEachOrdered(line -> clientRequest.append(line + System.lineSeparator()));
+                    String request = clientRequest.toString();
+                    System.out.println(request);
 
-//                    for (int i = 0; i < 10000; i++) {
-//                        //if (chars[i] != '\u0000')
-//                        System.out.println(chars[i] + String.format(": \\u%04X", (int)chars[i]) );
-//                    }
-                   //reader.read
-                    //socket.
-                    reader.lines().filter(l -> l != null).forEachOrdered(l -> {
-                        for (int i = 0; i < l.length(); i++) {
-                            System.out.println(l.charAt(i)+ String.format(": \\u%04X", (int)l.charAt(i)));
-                        }
-                    });//.forEachOrdered(line -> clientRequest.append(line + System.lineSeparator()));
-                    //reader.lines().forEach(System.out::println);
-                    System.out.println(clientRequest.toString());
+                    String answer = getAnswer(request);
+                    OutputStream outputStream = socket.getOutputStream();
+                    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream));
+                    System.out.println("answer:");
+                    System.out.println(answer);
+                    writer.write(answer);
+                    writer.flush();
+                    outputStream.flush();
+                    socket.setSoTimeout(3);
+                    //Thread.sleep(10000);
+                    System.out.println("\nEnds of sleep\n");
+//                    reader.close();
+//                    writer.close();
                 }
                 // todo проверить цикличность
             }
@@ -56,23 +44,46 @@ public class MySocket {
         }
     }
 
-    private static int getPortFromConfig() {
-        try {
-            DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-            Document document = documentBuilder.parse("src\\main\\resources\\MySocket.config");
-
-            Node node = document.getDocumentElement();
-            NodeList elements = node.getChildNodes();
-            for (int i = 0; i < elements.getLength(); i++) {
-                Node element = elements.item(i);
-                if (element.getNodeType() != Node.TEXT_NODE && element.getNodeName().equals("PORT")) {
-                    return Integer.parseInt(element.getChildNodes().item(0).getTextContent());
-                }
-            }
-        } catch (Throwable e) {
-            return DEFAULT_PORT;
+    private static String getAnswer(String request) {
+        StringBuffer answer = new StringBuffer();
+        if (request.startsWith("GET")) {
+            String body = getBody();
+            answer.append("HTTP/1.1 200 Hello client\r\n");
+            answer.append("Server: MySocket \r\n");
+            answer.append("Content-Length: " + body.length() + "\r\n");
+            answer.append("\r\n");
+            answer.append(body);
+        } else {
+            answer.append("HTTP/1.1 404 Bad Request\r\n");
+            answer.append("Server: MySocket \r\n");
+            answer.append("Content-Length: 0\r\n");
+            answer.append("\r\n");
         }
-        return DEFAULT_PORT;
+        return answer.toString();
+    }
+
+
+    private static String getBody() {
+        StringBuffer body = new StringBuffer();
+        body.append("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"\n\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n");
+        body.append("<html>");
+        body.append("<head>Current folder contains:</head>");
+        body.append("<body>");
+        body.append(getContentsOfCurrentFolder());
+        body.append("</body>");
+        body.append("</html>");
+
+        return body.toString();
+    }
+
+    private static String getContentsOfCurrentFolder() {
+        StringBuffer buffer = new StringBuffer();
+        // String absolutePath = new File(".").getAbsolutePath();
+        //absolutePath = absolutePath.substring(0, absolutePath.length()-1);
+        File currentFolder = new File("");
+
+
+        return buffer.toString();
     }
 }
 
