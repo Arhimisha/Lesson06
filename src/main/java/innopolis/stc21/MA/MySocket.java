@@ -5,6 +5,7 @@ import static innopolis.stc21.MA.ConfigReader.getPortFromConfig;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Objects;
 
 public class MySocket {
 
@@ -18,7 +19,7 @@ public class MySocket {
                     BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
                     System.out.println("clientRequest:");
                     StringBuffer clientRequest = new StringBuffer();
-                    reader.lines().filter(l -> l != null).takeWhile(l -> !l.isEmpty()).forEachOrdered(line -> clientRequest.append(line + System.lineSeparator()));
+                    reader.lines().filter(Objects::nonNull).takeWhile(l -> !l.isEmpty()).forEachOrdered(line -> clientRequest.append(line).append(System.lineSeparator()));
                     String request = clientRequest.toString();
                     System.out.println(request);
 
@@ -29,14 +30,8 @@ public class MySocket {
                     System.out.println(answer);
                     writer.write(answer);
                     writer.flush();
-                    outputStream.flush();
                     socket.setSoTimeout(3);
-                    //Thread.sleep(10000);
-                    System.out.println("\nEnds of sleep\n");
-//                    reader.close();
-//                    writer.close();
                 }
-                // todo проверить цикличность
             }
 
         } catch (IOException e) {
@@ -50,7 +45,7 @@ public class MySocket {
             String body = getBody();
             answer.append("HTTP/1.1 200 Hello client\r\n");
             answer.append("Server: MySocket \r\n");
-            answer.append("Content-Length: " + body.length() + "\r\n");
+            answer.append("Content-Length: ").append(body.length()).append("\r\n");
             answer.append("\r\n");
             answer.append(body);
         } else {
@@ -77,14 +72,20 @@ public class MySocket {
     }
 
     private static String getContentsOfCurrentFolder() {
-        StringBuffer buffer = new StringBuffer();
-        // String absolutePath = new File(".").getAbsolutePath();
-        //absolutePath = absolutePath.substring(0, absolutePath.length()-1);
-        File currentFolder = new File("");
+        return getInternalContent(new File("").getAbsoluteFile()).toString();
+    }
 
-
-        return buffer.toString();
+    private static StringBuffer getInternalContent(File currentFile) {
+        StringBuffer listOfFiles = new StringBuffer();
+        if (currentFile != null) {
+            File[] files = currentFile.getAbsoluteFile().listFiles();
+            for (File file : files) {
+                listOfFiles.append(file.getAbsolutePath()).append("<br>").append(System.lineSeparator());
+                if (file.isDirectory()) {
+                    listOfFiles.append(getInternalContent(file));
+                }
+            }
+        }
+        return listOfFiles;
     }
 }
-
-// todo убрать println
