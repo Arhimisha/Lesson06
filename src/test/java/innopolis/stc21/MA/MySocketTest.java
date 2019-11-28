@@ -1,11 +1,10 @@
 package innopolis.stc21.MA;
 
-
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.*;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.Objects;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
@@ -15,47 +14,50 @@ import static innopolis.stc21.MA.ConfigReader.*;
 
 public class MySocketTest {
 
-    @Test
-    public void main() {
-        Future<Void> task = new FutureTask<Void>(() -> {
+    @BeforeClass
+    public static void startServer(){
+        Future<Void> task = new FutureTask<>(() -> {
             MySocket.main(new String[]{""});
             return null;
         });
         Thread server = new Thread((Runnable) task);
         server.setDaemon(true);
         server.start();
+    }
 
-        int port = getPortFromConfig();
-        String ip = getIpFromConfig();
-        try (Socket socket = new Socket(ip, port)) {
-            OutputStream outputStream = socket.getOutputStream();
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream));
-            InputStream inputStream = socket.getInputStream();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-            StringBuffer serverAnswer = new StringBuffer();
+    @Test
+    public void checkGoodAnswer() {
+        String serverAnswer = getServerAnswer("GET / HTTP/1.1\r\nHost: %s:%s\r\n\r\n");
+        assertTrue(serverAnswer.startsWith("HTTP/1.1 200 Hello client"));
+    }
 
-            writer.write(String.format("GET / HTTP/1.1\r\nHost: %s:%s\r\n\r\n", ip, port));
+    @Test
+    public void checkBadAnswer() {
+        String serverAnswer = getServerAnswer("NOT GET / HTTP/1.1\r\nHost: %s:%s\r\n\r\n");
+        assertTrue(serverAnswer.startsWith("HTTP/1.1 404 Bad Request"));
+    }
+
+    private String getServerAnswer(String request) {
+        final StringBuffer serverAnswer = new StringBuffer();
+        final int port = getPortFromConfig();
+        final String ip = getIpFromConfig();
+        try (Socket socket = new Socket(ip, port);
+             OutputStream outputStream = socket.getOutputStream();
+             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream));
+             InputStream inputStream = socket.getInputStream();
+             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        ) {
+            writer.write(String.format(request, ip, port));
             writer.flush();
-            reader.lines().filter(Objects::nonNull).takeWhile(l -> !l.isEmpty()).forEachOrdered(line -> serverAnswer.append(line).append(System.lineSeparator()));
-            assertTrue(serverAnswer.toString().startsWith("HTTP/1.1 200 Hello client"));
-
-            //Cleaning reader
-            while (reader.ready()) {
-                reader.read();
-            }
-            serverAnswer.setLength(0);
-
-            writer.write(String.format("NOT GET / HTTP/1.1\r\nHost: %s:%s\r\n\r\n", ip, port));
-            writer.flush();
-            reader.lines().filter(Objects::nonNull).takeWhile(l -> !l.isEmpty()).forEachOrdered(line -> serverAnswer.append(line).append(System.lineSeparator()));
-            assertTrue(serverAnswer.toString().startsWith("HTTP/1.1 404 Bad Request"));
-
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-            fail();
+            reader.lines()
+                    .filter(Objects::nonNull)
+                    .takeWhile(l -> !l.isEmpty())
+                    .forEachOrdered(line -> serverAnswer.append(line).append(System.lineSeparator()));
         } catch (IOException e) {
             e.printStackTrace();
-            fail();
+            fail(e.getMessage());
+        } finally {
+            return serverAnswer.toString();
         }
     }
 }

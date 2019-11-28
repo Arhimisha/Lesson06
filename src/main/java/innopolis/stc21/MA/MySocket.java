@@ -40,7 +40,7 @@ public class MySocket {
             }
 
         } catch (IOException e) {
-            //e.printStackTrace();
+            e.printStackTrace();
             System.out.println("Socket is close");
         }
     }
